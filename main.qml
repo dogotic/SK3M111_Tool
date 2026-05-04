@@ -62,7 +62,7 @@ ApplicationWindow {
             }
 
             Label {
-                text: "(" + (maxGateBox.value * 0.70).toFixed(2) + " m)"
+                text: "(" + (maxGateBox.value * 70).toFixed(0) + " cm)"
                 color: "#666666"
             }
 
@@ -196,7 +196,7 @@ ApplicationWindow {
                     ctx.fillStyle  = "rgba(160,180,230,0.75)"
                     ctx.font       = "10px sans-serif"
                     ctx.textAlign  = "left"
-                    ctx.fillText((g2 * 0.70).toFixed(1) + " m", lx, ly)
+                    ctx.fillText((g2 * 0.70 * 100).toFixed(0) + " cm", lx, ly)
                 }
 
                 // ── Outer boundary lines + arc ────────────────────────────
@@ -235,44 +235,25 @@ ApplicationWindow {
                     var dotX = cx
                     var dotY = sy + distM * scale
 
-                    // Radial glow
-                    var grd = ctx.createRadialGradient(dotX, dotY, 0, dotX, dotY, 26)
-                    grd.addColorStop(0.00, "rgba(255,255,255,0.90)")
-                    grd.addColorStop(0.20, "rgba(160,255,160,0.60)")
-                    grd.addColorStop(1.00, "rgba(76,175,80,0.00)")
+                    // Soft red glow
+                    var grd = ctx.createRadialGradient(dotX, dotY, 0, dotX, dotY, 22)
+                    grd.addColorStop(0.0, "rgba(229,57,53,0.70)")
+                    grd.addColorStop(1.0, "rgba(229,57,53,0.00)")
                     ctx.fillStyle = grd
                     ctx.beginPath()
-                    ctx.arc(dotX, dotY, 26, 0, Math.PI * 2)
+                    ctx.arc(dotX, dotY, 22, 0, Math.PI * 2)
                     ctx.fill()
 
-                    // Outer targeting ring
-                    ctx.strokeStyle = "rgba(255,255,255,0.55)"
+                    // Red circle
+                    ctx.fillStyle = "#e53935"
+                    ctx.beginPath()
+                    ctx.arc(dotX, dotY, 10, 0, Math.PI * 2)
+                    ctx.fill()
+
+                    // White border for contrast against green background
+                    ctx.strokeStyle = "rgba(255,255,255,0.85)"
                     ctx.lineWidth   = 1.5
-                    ctx.setLineDash([4, 3])
-                    ctx.beginPath()
-                    ctx.arc(dotX, dotY, 13, 0, Math.PI * 2)
                     ctx.stroke()
-                    ctx.setLineDash([])
-
-                    // Cross-hair ticks (horizontal, aligned to fan arc)
-                    ctx.strokeStyle = "rgba(255,255,255,0.50)"
-                    ctx.lineWidth   = 1
-                    ctx.beginPath()
-                    ctx.moveTo(dotX - 22, dotY)
-                    ctx.lineTo(dotX - 14, dotY)
-                    ctx.moveTo(dotX + 14, dotY)
-                    ctx.lineTo(dotX + 22, dotY)
-                    ctx.moveTo(dotX, dotY - 22)
-                    ctx.lineTo(dotX, dotY - 14)
-                    ctx.moveTo(dotX, dotY + 14)
-                    ctx.lineTo(dotX, dotY + 22)
-                    ctx.stroke()
-
-                    // Solid centre dot
-                    ctx.fillStyle = "#ffffff"
-                    ctx.beginPath()
-                    ctx.arc(dotX, dotY, 5, 0, Math.PI * 2)
-                    ctx.fill()
                 }
 
                 // ── Ceiling (hatch lines above sensor) ───────────────────
@@ -310,7 +291,7 @@ ApplicationWindow {
                 if (!online)       label = "Disconnected"
                 else if (rawData === "") label = "Waiting…"
                 else if (!active)  label = "OFF"
-                else if (distM >= 0) label = distM.toFixed(2) + " m"
+                else if (distM >= 0) label = (distM * 100).toFixed(0) + " cm"
                 else               label = rawData
 
                 ctx.font      = "bold 32px sans-serif"

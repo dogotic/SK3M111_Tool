@@ -251,7 +251,7 @@ void SerialHandler::parseAsciiLine(const QByteArray &raw)
     if (m_isActive) {
         bool ok = false;
         m_rangeGate = data.mid(6).trimmed().toInt(&ok);
-        m_distanceM = ok ? m_rangeGate * GATE_DIST_M : -1.0;
+        m_distanceM = ok ? m_rangeGate / 100.0 : -1.0;
         if (!ok) m_rangeGate = -1;
     } else {
         m_rangeGate = -1;
