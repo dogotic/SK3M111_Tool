@@ -137,20 +137,26 @@ void SerialHandler::sendConfig(int maxRangeGate, int absenceReportDelay)
 {
     if (m_fd < 0) { setStatus("Not connected"); return; }
 
-    // Command 0x0007: Write Parameters
-    // Params: 0x0001 = max range gate, 0x0004 = absence delay, 0x0010 = sensitivity (fixed)
-    QByteArray payload;
-    payload.append("\x07\x00", 2);                          // command 0x0007
-    payload.append("\x01\x00", 2);                          // param ID: max range gate
-    payload.append(char(maxRangeGate)); payload.append("\x00\x00\x00", 3); // uint32 LE
-    payload.append("\x04\x00", 2);                          // param ID: absence delay
-    payload.append(char(absenceReportDelay)); payload.append("\x00\x00\x00", 3); // uint32 LE
-    payload.append("\x10\x00", 2);                          // param ID: sensitivity
-    payload.append("\x4B\xEA\x00\x00", 4);                  // default sensitivity value
+    // Command 0x0007: Write Parameter — one frame per param (device ACKs each with 0x0107)
+    auto writeParam = [this](quint16 id, quint32 val) {
+        QByteArray p;
+        p.append('\x07'); p.append('\x00');                  // cmd 0x0007
+        p.append(char(id & 0xFF));          p.append(char(id >> 8));
+        p.append(char(val & 0xFF));         p.append(char((val >>  8) & 0xFF));
+        p.append(char((val >> 16) & 0xFF)); p.append(char((val >> 24) & 0xFF));
+        sendFrame(p);
+    };
 
-    sendFrame(payload);
-    setStatus(QString("Config sent: gate %1 (%.2f m max), absence %2 s")
-              .arg(maxRangeGate).arg(maxRangeGate * GATE_DIST_M).arg(absenceReportDelay));
+    writeParam(0x0001, quint32(maxRangeGate));        // max range gate
+    writeParam(0x0004, quint32(absenceReportDelay));  // absence delay (s)
+
+    // Command 0x00FE: Save to flash — without this, config resets on power loss
+    sendFrame(QByteArray("\xFE\x00", 2));
+
+    setStatus(QString("Config sent: gate %1 (%2 m max), absence %3 s")
+              .arg(maxRangeGate)
+              .arg(maxRangeGate * GATE_DIST_M, 0, 'f', 2)
+              .arg(absenceReportDelay));
 }
 
 void SerialHandler::readFirmwareVersion()
@@ -281,7 +287,7 @@ void SerialHandler::parseCommandResponse(const QByteArray &frame)
     }
 
     switch (cmd) {
-    case 0x00: { // firmware version: [2 str_len][str...]
+    case 0x00: { // firmware version response: [2 str_len][str...]
         if (frame.size() < 12) return;
         const int strLen = (uint8_t)frame[10] | ((uint8_t)frame[11] << 8);
         if (frame.size() < 12 + strLen) return;
@@ -289,8 +295,12 @@ void SerialHandler::parseCommandResponse(const QByteArray &frame)
             QString::fromLatin1(frame.constData() + 12, strLen)));
         break;
     }
+    case 0x07: // write parameter ACK
+        break;
+    case 0xFE: // save-to-flash ACK — config persisted across power cycles
+        setStatus("Config saved to flash");
+        break;
     default:
-        setStatus(QString("Command 0x%1 OK").arg(cmd, 2, 16, QChar('0')));
         break;
     }
 }
